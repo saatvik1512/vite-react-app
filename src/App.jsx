@@ -50,7 +50,7 @@ const HeightDetector = () => {
     try {
       const constraints = {
         video: {
-          facingMode: 'user', // Try both 'user' and 'environment'
+          facingMode: 'environment', // Try both 'user' and 'environment'
           width: { ideal: 640 },
           height: { ideal: 480 },
           frameRate: { ideal: 30 }
