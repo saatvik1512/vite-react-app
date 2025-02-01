@@ -6,12 +6,13 @@ const HeightDetector = () => {
   const videoRef = useRef(null);
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
-  const [imgSrc, setImgSrc] = useState(null);
   const [height, setHeight] = useState(null);
   const [isCameraStarted, setIsCameraStarted] = useState(false);
   const [error, setError] = useState('');
   const poseRef = useRef(null);
   const streamRef = useRef(null);
+  const latestWorldLandmarks = useRef(null);
+
 
   useEffect(() => {
     const pose = new Pose({
@@ -27,7 +28,20 @@ const HeightDetector = () => {
       minTrackingConfidence: 0.5
     });
 
-    pose.onResults(handlePoseResults);
+    // pose.onResults(handlePoseResults);
+    pose.onResults((results) => {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+      if (results.poseLandmarks) {
+        drawLandmarks(ctx, results.poseLandmarks);
+        // Store latest landmarks without calculating height
+        latestWorldLandmarks.current = results.poseWorldLandmarks;
+      }
+    });
     poseRef.current = pose;
 
     return () => {
@@ -50,7 +64,7 @@ const HeightDetector = () => {
     try {
       const constraints = {
         video: {
-          facingMode: 'environment', // Try both 'user' and 'environment'
+          facingMode: {ideal : "environment"}, // Try both 'user' and 'environment'
           width: { ideal: 640 },
           height: { ideal: 480 },
           frameRate: { ideal: 30 }
@@ -97,18 +111,18 @@ const HeightDetector = () => {
     }
   };
 
-  const handlePoseResults = (results) => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+  // const handlePoseResults = (results) => {
+  //   const canvas = canvasRef.current;
+  //   const ctx = canvas.getContext('2d');
     
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+  //   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  //   ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
-    if (results.poseLandmarks) {
-      drawLandmarks(ctx, results.poseLandmarks);
-      calculateHeight(results.poseWorldLandmarks);
-    }
-  };
+  //   if (results.poseLandmarks) {
+  //     drawLandmarks(ctx, results.poseLandmarks);
+  //     calculateHeight(results.poseWorldLandmarks);
+  //   }
+  // };
 
   const drawLandmarks = (ctx, landmarks) => {
     ctx.fillStyle = '#FF0000';
@@ -119,39 +133,39 @@ const HeightDetector = () => {
     });
   };
 
-  const calculateHeight = (worldLandmarks) => {
-    if (!worldLandmarks) return;
+  const calculateHeight = () => {
+    if (!latestWorldLandmarks.current) {
+      setError('No person detected. Please ensure full body is visible.');
+      return null;
+    }
 
-    const nose = worldLandmarks[0];   // Landmark 0: NOSE
-    const leftHeel = worldLandmarks[29]; // Landmark 29: LEFT_HEEL
-    const rightHeel = worldLandmarks[30]; // Landmark 30: RIGHT_HEEL
+    const worldLandmarks = latestWorldLandmarks.current;
+    const nose = worldLandmarks[0];
+    const leftHeel = worldLandmarks[29];
+    const rightHeel = worldLandmarks[30];
 
     if (!nose || !leftHeel || !rightHeel) {
       setError('Key points not detected');
-      return;
+      return null;
     }
 
-    // Convert 3D world coordinates to meters (MediaPipe's coordinate system)
     const averageHeelZ = (leftHeel.z + rightHeel.z) / 2;
     const verticalDistance = Math.abs(nose.y - (leftHeel.y + rightHeel.y) / 2);
     
-    // Calculate 3D Euclidean distance
     const heightMeters = Math.sqrt(
       Math.pow(nose.x - (leftHeel.x + rightHeel.x)/2, 2) +
       Math.pow(verticalDistance, 2) +
       Math.pow(nose.z - averageHeelZ, 2)
     );
 
-    setHeight((heightMeters * 100).toFixed(1)); // Convert to centimeters
-    setError('');
+    return (heightMeters * 100).toFixed(1);
   };
 
   const capture = () => {
-    const imageSrc = webcamRef.current.video.videoWidth ? 
-      webcamRef.current.video.toDataURL('image/jpeg') : null;
-    if (imageSrc) {
-      setImgSrc(imageSrc);
-      processImage(imageSrc);
+    setError('');
+    const calculatedHeight = calculateHeight();
+    if (calculatedHeight) {
+      setHeight(calculatedHeight);
     }
   };
 
@@ -220,7 +234,7 @@ const HeightDetector = () => {
             Start Camera
           </button>
         ) : (
-          <button 
+          <button // voice recognition part 1. add microphone button for ... 2. user speaks upfront 3. 
             onClick={capture}
             style={{ fontSize: '20px', padding: '15px 30px' }}
           >
