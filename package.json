@@ -20,9 +20,12 @@
     "gh-pages": "^6.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-webcam": "^7.2.0"
+    "react-speech-recognition": "^3.10.0",
+    "react-webcam": "^7.2.0",
+    "regenerator-runtime": "^0.14.1"
   },
   "devDependencies": {
+    "@babel/plugin-transform-runtime": "^7.25.9",
     "@eslint/js": "^9.17.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
