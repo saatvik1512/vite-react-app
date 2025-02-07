@@ -1,0 +1,93 @@
+.face-auth-container {
+    max-width: 500px;
+    margin: 40px auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
+  
+  /* Styling the webcam container like a form */
+  .webcam-container {
+    background: #3d3d3d;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Webcam view styling */
+  .webcam-view {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+  }
+  
+  /* Controls and mode selector */
+  .auth-controls {
+    margin-top: 20px;
+    text-align: center;
+  }
+  
+  .mode-selector button {
+    margin: 0 10px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  
+  /* Highlight active mode button */
+  .mode-selector button.active {
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Different colors for Sign In and Sign Up buttons */
+  .mode-selector button:first-child {
+    background-color: #007BFF;
+    color: white;
+  }
+  
+  .mode-selector button:last-child {
+    background-color: #28a745;
+    color: white;
+  }
+  
+  /* Capture button styling */
+  .capture-button {
+    margin-top: 20px;
+    padding: 10px 30px;
+    font-size: 18px;
+    background-color: #ffc107;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    color: #fff;
+    transition: background 0.3s ease;
+  }
+  
+  .capture-button:hover {
+    background-color: #e0a800;
+  }
+  
+  .capture-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  /* Authentication status message styling */
+  .auth-status {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 18px;
+  }
+  
+  /* Success messages in green */
+  .auth-status.success {
+    color: green;
+  }
+  
+  /* Error messages in red */
+  .auth-status.error {
+    color: red;
+  }

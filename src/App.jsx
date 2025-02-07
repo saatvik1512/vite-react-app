@@ -197,11 +197,6 @@ const HeightDetector = () => {
       startVoiceRecognition();
     } catch (err) {
       console.error('Camera error:', err);
-      setError(`Camera access denied. Please: 
-        1. Check browser permissions
-        2. Ensure HTTPS/localhost
-        3. Try a different camera (front/back)
-        4. Restart browser`);
       stopCamera();
     }
   };
