@@ -1,23 +1,32 @@
 import React, { useState, useRef } from 'react';
 import Webcam from 'react-webcam';
 import axios from 'axios';
-import './FaceAuth.css'; // Import the CSS file for styling
+import './FaceAuth.css';
+import mySvg from '../assets/mySvg.svg';
+import { raggedGather } from '@tensorflow/tfjs';
 
 const FaceAuth = ({ onAuthSuccess }) => {
-  const webcamRef = useRef(null);
+  // stage: "choose" (select mode) or "capture" (show webcam for capture)
+  const [stage, setStage] = useState("choose");
+  // false: Login; true: Sign Up
+  const [isSignUp, setIsSignUp] = useState(false);
   const [authStatus, setAuthStatus] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const webcamRef = useRef(null);
 
+  // When user clicks the SVG after choosing mode, proceed to capture stage.
+  const startAuth = () => {
+    setAuthStatus('');
+    setStage("capture");
+  };
+
+  // Capture the photo and send to backend.
   const capturePhoto = async () => {
     setIsProcessing(true);
     setAuthStatus('Processing...');
 
     try {
-      // Capture the image from the webcam as a data URL
       const imageSrc = webcamRef.current.getScreenshot();
-
-      // Convert the data URL to a blob (ensuring JPEG type)
       const blob = await fetch(imageSrc)
         .then((res) => res.blob())
         .then((blob) => new Blob([blob], { type: 'image/jpeg' }));
@@ -26,82 +35,112 @@ const FaceAuth = ({ onAuthSuccess }) => {
         throw new Error('Image capture too small');
       }
 
-      // Prepare FormData to send to the backend
       const formData = new FormData();
       formData.append('file', blob, 'face_capture.jpg');
-      console.log('Sending file:', formData.get('file'));
 
-      // Determine endpoint based on whether we're signing up or signing in
       const endpoint = isSignUp ? '/signup' : '/signin';
       const response = await axios.post(`http://localhost:5000/${endpoint}`, formData);
 
-      console.log('Response from server:', response.data);
-
-      // Check for userId in the response data
       if (response.data.userId) {
         setAuthStatus(isSignUp ? 'Registration successful!' : 'Authentication successful!');
         onAuthSuccess(response.data.userId);
-      } else {
-        setAuthStatus('Unexpected error: no userId returned.');
       }
     } catch (error) {
-      // Customize error messages based on the response from the backend
       const errMsg =
         error.response?.data?.error ||
         (isSignUp
-          ? 'You are an existing user. Just sign in.'
-          : 'Face not recognized. Please sign in first.');
+          ? 'Registration failed. Please try again.'
+          : 'Authentication failed. Please try again.');
       setAuthStatus(errMsg);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  return (
-    <div className="face-auth-container">
-      <h2>Face Authentication</h2>
+  // Go back from capture stage to the mode selection screen.
+  const goBack = () => {
+    setStage("choose");
+    setAuthStatus('');
+  };
 
-      <div className="webcam-container">
-        <Webcam
-          ref={webcamRef}
-          screenshotFormat="image/jpeg"
-          mirrored
-          className="webcam-view"
-        />
-
-        <div className="auth-controls">
-          <div className="mode-selector">
-            <button 
+  // Stage 1: Mode selection screen
+  if (stage === "choose") {
+    return (
+      <div className="faceauth-container">
+        <div className="auth-box">
+          <h1 className="auth-title">Height Detection App</h1>
+          <p className="auth-subtitle">
+            {isSignUp ? "Sign up with face" : "Login with face"}
+          </p>
+          <div className="button-group">
+            <button
+              className={`auth-btn login-btn ${!isSignUp ? "selected" : ""}`}
               onClick={() => setIsSignUp(false)}
-              className={!isSignUp ? 'active' : ''}
+              disabled={isProcessing}
             >
-              Sign In
+              Login
             </button>
-            <button 
+            <button
+              className={`auth-btn signup-btn ${isSignUp ? "selected" : ""}`}
               onClick={() => setIsSignUp(true)}
-              className={isSignUp ? 'active' : ''}
+              disabled={isProcessing}
             >
               Sign Up
             </button>
           </div>
-
-          <button 
-            onClick={capturePhoto}
-            disabled={isProcessing}
-            className="capture-button"
+          <div
+            className="svg-container"
+            onClick={startAuth}
+            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center', marginTop: '20px' }}
           >
-            {isSignUp ? 'Register Face' : 'Authenticate'}
-          </button>
+            <img
+              src={mySvg}
+              alt="Proceed"
+              style={{
+                height: '6rem',
+                borderRadius: '50%',
+                background: 'rgb(139, 69, 19)',
+                padding: '2rem'
+              }}
+            />
+          </div>
         </div>
       </div>
+    );
+  }
 
-      {authStatus && (
-        <div className={`auth-status ${authStatus.includes('successful') ? 'success' : 'error'}`}>
-          {authStatus}
+  // Stage 2: Capture screen with webcam.
+  if (stage === "capture") {
+    return (
+      <div className="faceauth-container">
+        <div className="auth-box">
+          <h1 className="auth-title">{isSignUp ? "Sign Up" : "Sign In"}</h1>
+          <p className="auth-subtitle">Please capture your face</p>
+          <div className="webcam-container">
+            <Webcam
+              ref={webcamRef}
+              screenshotFormat="image/jpeg"
+              mirrored
+              className="webcam-feed"
+            />
+          </div>
+          <button className="auth-btn capture-btn" onClick={capturePhoto} disabled={isProcessing}>
+            Capture
+          </button>
+          <button className="auth-btn back-btn" onClick={goBack} disabled={isProcessing}>
+            Back
+          </button>
+          {authStatus && (
+            <div className={`auth-status ${authStatus.includes('successful') ? 'success' : 'error'}`}>
+              {authStatus}
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default FaceAuth;
