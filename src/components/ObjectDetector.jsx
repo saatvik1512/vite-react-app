@@ -8,7 +8,26 @@ const ObjectDetector = () => {
   const [detections, setDetections] = useState([]);
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [objectInfo, setObjectInfo] = useState('');
+  const [selectedObject, setSelectedObject] = useState('');
+  const [synth, setSynth] = useState(null);
+  const [utterance, setUtterance] = useState(null);
+  const abortController = useRef(new AbortController());
+
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      setSynth(window.speechSynthesis);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (synth && synth.speaking) {
+        synth.cancel();
+      }
+    };
+  }, [synth]);
 
   const videoConstraints = {
     facingMode: { ideal: 'environment' },
@@ -16,50 +35,118 @@ const ObjectDetector = () => {
     height: { ideal: 720 }
   };
 
-  // Drawing function
+  // Function to fetch info from backend for a given object label.
+  const fetchObjectInfo = async (objectLabel) => {
+    try {
+      abortController.current.abort();
+      abortController.current = new AbortController();
+      const response = await axios.post('http://localhost:5000/get-object-info', {
+        object: objectLabel
+      }, {
+        signal: abortController.current.signal
+      });
+      if (response.data.info) {
+        setObjectInfo(response.data.info);
+        speakText(response.data.info);  // Speak the description
+      }
+    } catch (err) {
+      if (err.name !== 'CanceledError') {
+        setError('Failed to fetch object information');
+      }
+    }
+  };
+
+  const speakText = (text) => {
+    if (!synth) {
+      setError('Text-to-speech not supported');
+      return;
+    }
+
+    // Stop current speech
+    if (synth.speaking) {
+      synth.cancel();
+    }
+
+    // Create and speak new utterance
+    const newUtterance = new SpeechSynthesisUtterance(text);
+    newUtterance.voice = synth.getVoices()[0]; // Choose preferred voice
+    setUtterance(newUtterance);
+    synth.speak(newUtterance);
+
+    // Handle speech errors
+    newUtterance.onerror = (event) => {
+      console.error('Speech error:', event.error);
+      setError('Error speaking description');
+    };
+  };
+
+  // onClick handler for the canvas.
+  const handleCanvasClick = (event) => {
+    // Get canvas bounding rectangle.
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    // Compute click coordinates relative to canvas.
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+    
+    // Iterate over detections to see if click falls inside any bbox.
+    for (let detection of detections) {
+      const [x1, y1, x2, y2] = detection.bbox;
+      if (clickX >= x1 && clickX <= x2 && clickY >= y1 && clickY <= y2) {
+        if (synth && synth.speaking) {
+          synth.cancel();
+        }
+        setSelectedObject(detection.label);
+        // Fetch object information from backend.
+        fetchObjectInfo(detection.label);
+        return; // Only process the first detection that matches.
+      }
+    }
+  };
+
+  // Drawing function: draw detection boxes on the canvas.
   const drawBoxes = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear previous drawings
+    // Clear previous drawings.
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Get video element dimensions
+    // Get video element dimensions.
     const video = webcamRef.current.video;
     if (!video) return;
-
-    // Match canvas to video display size
+    
+    // Ensure the canvas size matches the video size.
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // Draw each detection
+    // Draw each detection.
     detections.forEach(detection => {
       const [x1, y1, x2, y2] = detection.bbox;
       const label = detection.label;
       
-      // Set box style
       ctx.strokeStyle = getColorForLabel(label);
       ctx.lineWidth = 3;
       ctx.font = '16px Arial';
       
-      // Draw bounding box
+      // Draw bounding box.
       ctx.beginPath();
       ctx.rect(x1, y1, x2 - x1, y2 - y1);
       ctx.stroke();
       
-      // Draw label background
+      // Draw label background.
       ctx.fillStyle = getColorForLabel(label);
       const textWidth = ctx.measureText(label).width;
       ctx.fillRect(x1, y1 - 20, textWidth + 10, 20);
       
-      // Draw label text
+      // Draw label text.
       ctx.fillStyle = 'white';
       ctx.fillText(label, x1 + 5, y1 - 5);
     });
   };
 
-  // Generate color based on label
+  // Utility: get color for a given label.
   const getColorForLabel = (label) => {
     const colors = {
       person: '#FF0000',
@@ -70,43 +157,51 @@ const ObjectDetector = () => {
     return colors[label.toLowerCase()] || colors.default;
   };
 
+  // Capture objects using YOLO.
   const captureMeasurement = async () => {
     setIsProcessing(true);
     setError('');
+    setObjectInfo('');
     
     try {
-      const imageSrc = webcamRef.current.getScreenshot();
-      const blob = await fetch(imageSrc).then(r => r.blob());
-      
-      const formData = new FormData();
-      formData.append('file', blob, 'object.jpg');
+        const imageSrc = webcamRef.current.getScreenshot();
+        const blob = await fetch(imageSrc).then(r => r.blob());
+        
+        const formData = new FormData();
+        formData.append('file', blob, 'object.jpg');
 
-      const response = await axios.post('http://localhost:5000/detect-objects', formData);
-      
-      if (response.data.error) throw new Error(response.data.error);
-      if (!response.data.results.length) throw new Error('No objects detected');
-      
-      setDetections(response.data.results);
+        const response = await axios.post(
+            'http://localhost:5000/detect-objects', 
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            }
+        );
+        
+        if (response.data.error) throw new Error(response.data.error);
+        if (!response.data.results?.length) throw new Error('No objects detected');
+        
+        setDetections(response.data.results);
     } catch (err) {
-      setError(err.message);
+        setError(err.response?.data?.error || err.message);
     } finally {
-      setIsProcessing(false);
+        setIsProcessing(false);
     }
-  };
+};
 
-  // Redraw boxes when detections change
+  // Redraw boxes whenever detections change.
   useEffect(() => {
     drawBoxes();
   }, [detections]);
 
-  // Handle window resize
+  // Handle window resize.
   useEffect(() => {
     const handleResize = () => {
       if (webcamRef.current && webcamRef.current.video) {
-        setDimensions({
-          width: webcamRef.current.video.videoWidth,
-          height: webcamRef.current.video.videoHeight
-        });
+        // Redraw the canvas if necessary.
+        drawBoxes();
       }
     };
 
@@ -127,18 +222,20 @@ const ObjectDetector = () => {
           style={{ width: '100%', height: 'auto' }}
         />
         
+        {/* Canvas with click handling */}
         <canvas
           ref={canvasRef}
+          onClick={handleCanvasClick}
           style={{
             position: 'absolute',
             top: 0,
             left: 0,
             width: '100%',
             height: '100%',
-            pointerEvents: 'none'
+            cursor: 'pointer'
           }}
         />
-
+        
         <button
           onClick={captureMeasurement}
           disabled={isProcessing}
@@ -152,24 +249,29 @@ const ObjectDetector = () => {
         >
           {isProcessing ? 'Analyzing...' : 'Measure Objects'}
         </button>
+        
+        {/* Info overlay: display object info if available */}
+        {objectInfo && (
+          <div 
+            className="object-info-overlay" 
+            style={{
+              position: 'absolute',
+              bottom: '70px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              color: '#00ff88',
+              padding: '10px 20px',
+              borderRadius: '8px'
+            }}
+          >
+            <h4 style={{ margin: 0 }}>About {selectedObject}:</h4>
+            <p style={{ margin: 0 }}>{objectInfo}</p>
+          </div>
+        )}
       </div>
 
       {error && <div className="error">{error}</div>}
-
-      {detections.length > 0 && (
-        <div className="results">
-          <h3>Detection Results:</h3>
-          {detections.map((obj, i) => (
-            <div key={i} className="detection-item">
-              <strong style={{ color: getColorForLabel(obj.label) }}>
-                {obj.label}
-              </strong>
-              <p>Width: {obj.width} cm</p>
-              <p>Height: {obj.height} cm</p>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

@@ -10,7 +10,7 @@ function App2() {
 
   // Log whenever currentUser changes
   useEffect(() => {
-    console.log("Current user updated:", currentUser);a
+    console.log("Current user updated:", currentUser);
   }, [currentUser]);
 
   const handleAuthSuccess = (userId) => {

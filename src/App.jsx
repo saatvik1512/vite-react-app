@@ -19,8 +19,10 @@ const HeightDetector = () => {
   const abortController = useRef(new AbortController());
   const voiceCaptureTimeout = useRef(null);
 
-  const { transcript, browserSupportsSpeechRecognition } = useSpeechRecognition();
+  const { transcript, browserSupportsSpeechRecognition, resetTranscript } = useSpeechRecognition();
   const [isListening, setIsListening] = useState(false);
+
+  
 
   // 1. Initialize the Pose instance before starting the camera.
   useEffect(() => {
@@ -228,6 +230,7 @@ const HeightDetector = () => {
       );
       window.speechSynthesis.speak(msg);
     }
+    resetTranscript();
     voiceCaptureTimeout.current=null;
     }, 1000);
   };
