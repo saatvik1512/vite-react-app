@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import FaceAuth from "./components/FaceAuth";
-import HeightDetector from "./App"; // Ensure this import path is correct
 import ObjectDetector from './components/ObjectDetector';
+import HeightDetector from './App';
 
 
 function App2() {
@@ -28,19 +28,27 @@ function App2() {
         <FaceAuth onAuthSuccess={handleAuthSuccess} />
       ) : (
         <div className="app-container">
-          <div className="user-header">
-            <div className="user-greeting">
+          <div className="user-header" style={{display:'grid', gridTemplateRows:'1fr 1fr', justifyContent:'center', alignItems:'center'}} >
+            <div className="user-greeting" style={{ color: 'rgb(139 69 19)', textAlign:'center', marginBottom:'1.8rem', fontSize:'2.9rem'}}>
               Welcome User #{currentUser.slice(0, 8)}
             </div>
-            <button onClick={handleLogout} className="logout-button">
-              Logout
-            </button>
-            <nav className="nav-buttons">
-              <button onClick={() => setCurrentView('height')}>Height Detection</button>
-              <button onClick={() => setCurrentView('object')}>Object Detection</button>
+            <nav className="nav-buttons" style={{display:'flex', gap:'1.29'}}>
+              <button onClick={() => setCurrentView('height')} style={{ color: 'white', margin:'0 1.2rem', fontSize:'1.3rem' }}>
+                Height Detection
+              </button>
+              <button onClick={() => setCurrentView('object')} style={{ color: 'white', margin:'0 1.2rem', fontSize:'1.3rem' }}>
+                Object Detection 
+              </button>
             </nav>
           </div>
-          {currentView === 'height' ? <HeightDetector /> : <ObjectDetector />}
+          <div className="main-content">
+            {currentView === 'height' ? <HeightDetector /> : <ObjectDetector />}
+          </div>
+          <div className="footer" style={{display:'flex', justifyContent:'flex-end', marginTop:'20px'}}>
+            <button onClick={handleLogout} className="logout-button" style={{ color: 'white' }}>
+              Logout
+            </button>
+          </div>
         </div>
       )}
     </div>

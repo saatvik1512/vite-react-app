@@ -15,17 +15,19 @@
   "dependencies": {
     "@mediapipe/camera_utils": "^0.3.1675466862",
     "@mediapipe/pose": "^0.5.1675469404",
-    "@tailwindcss/vite": "^4.0.5",
+    "@react-oauth/google": "^0.12.1",
+    "@tailwindcss/vite": "^4.0.8",
     "@tensorflow-models/posenet": "^2.2.2",
     "@tensorflow/tfjs": "^4.22.0",
     "axios": "^1.7.9",
+    "firebase": "^11.3.1",
     "gh-pages": "^6.3.0",
+    "postcss-cli": "^11.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-speech-recognition": "^3.10.0",
     "react-webcam": "^7.2.0",
-    "regenerator-runtime": "^0.14.1",
-    "tailwindcss": "^4.0.5"
+    "regenerator-runtime": "^0.14.1"
   },
   "devDependencies": {
     "@babel/plugin-transform-runtime": "^7.25.9",
@@ -39,7 +41,8 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
-    "postcss": "^8.5.1",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
     "vite": "^6.0.5"
   }
 }

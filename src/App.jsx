@@ -229,6 +229,7 @@ const HeightDetector = () => {
         `Height measured: ${calculatedHeight} centimeters`
       );
       window.speechSynthesis.speak(msg);
+      console.log(msg)
     }
     resetTranscript();
     voiceCaptureTimeout.current=null;
@@ -343,7 +344,8 @@ const HeightDetector = () => {
             padding: '15px 30px',
             position: 'absolute',
             bottom: '20px',
-            right: '20px'
+            right: '20px',
+            color: 'white',
           }}
         >
           {isListening ? '🎤 Capture the Height' : 'Capture Manually'}

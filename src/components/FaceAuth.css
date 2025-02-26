@@ -84,8 +84,9 @@ body {
   flex: 1;
   font-size: 1.1rem;
   border: none;
-  border-radius: 5px;
+  border-radius: 25px;
   cursor: pointer;
+  color: #fff;
   transition: background 0.3s ease;
   margin: 10px
 }
@@ -161,4 +162,96 @@ body {
 .error {
   background: var(--error-bg);
   color: var(--error-text);
+}
+
+.face-guide-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 250px;
+  border: 3px solid #66FCF1;
+  border-radius: 15px;
+  box-shadow: 0 0 20px rgba(102, 252, 241, 0.3);
+  pointer-events: none;
+}
+
+.face-scan-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 15px;
+}
+
+.scan-line {
+  position: absolute;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(to right, 
+    transparent 0%, 
+    #66FCF1 50%, 
+    transparent 100%
+  );
+  animation: scan 2s infinite;
+  box-shadow: 0 0 10px rgba(102, 252, 241, 0.5);
+}
+
+.scan-glow {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(102, 252, 241, 0.1) 0%,
+    rgba(102, 252, 241, 0) 70%
+  );
+  animation: pulse 2s infinite;
+}
+
+@keyframes scan {
+  0% { top: 0; opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes pulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+  100% { opacity: 0.3; }
+}
+
+.face-guide-frame {
+  /* Existing styles */
+  animation: pulse-frame 2s infinite;
+}
+
+@keyframes pulse-frame {
+  0% { border-color: #66FCF1; }
+  50% { border-color: #45a29e; }
+  100% { border-color: #66FCF1; }
+}
+
+.webcam-container {
+  position: relative;
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+
+.webcam-container.invalid {
+  border-color: #ff4444;
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(5px); }
+  50% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+  100% { transform: translateX(0); }
 }

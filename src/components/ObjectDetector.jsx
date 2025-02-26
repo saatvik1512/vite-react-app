@@ -32,7 +32,8 @@ const ObjectDetector = () => {
   const videoConstraints = {
     facingMode: { ideal: 'environment' },
     width: { ideal: 1280 },
-    height: { ideal: 720 }
+    height: { ideal: 720 },
+    aspectRatio: 16/9
   };
 
   // Function to fetch info from backend for a given object label.
@@ -86,12 +87,33 @@ const ObjectDetector = () => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     // Compute click coordinates relative to canvas.
-    const clickX = event.clientX - rect.left;
-    const clickY = event.clientY - rect.top;
+
+    // const clickX = event.clientX - rect.left;
+    // const clickY = event.clientY - rect.top;
     
+    const clickX = (event.clientX - rect.left) * (canvas.width / rect.width);
+    const clickY = (event.clientY - rect.top) * (canvas.height / rect.height);
+
     // Iterate over detections to see if click falls inside any bbox.
-    for (let detection of detections) {
+
+    // for (let detection of detections) {
+    //   const [x1, y1, x2, y2] = detection.bbox;
+    //   if (clickX >= x1 && clickX <= x2 && clickY >= y1 && clickY <= y2) {
+    //     if (synth && synth.speaking) {
+    //       synth.cancel();
+    //     }
+    //     setSelectedObject(detection.label);
+    //     // Fetch object information from backend.
+    //     fetchObjectInfo(detection.label);
+    //     return; // Only process the first detection that matches.
+    //   }
+    // }
+
+    for (let i = detections.length - 1; i >= 0; i--) {
+      const detection = detections[i];
       const [x1, y1, x2, y2] = detection.bbox;
+      
+      // Check if click is inside the bounding box
       if (clickX >= x1 && clickX <= x2 && clickY >= y1 && clickY <= y2) {
         if (synth && synth.speaking) {
           synth.cancel();
@@ -99,59 +121,104 @@ const ObjectDetector = () => {
         setSelectedObject(detection.label);
         // Fetch object information from backend.
         fetchObjectInfo(detection.label);
-        return; // Only process the first detection that matches.
+        return;
       }
     }
+
   };
 
   // Drawing function: draw detection boxes on the canvas.
   const drawBoxes = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear previous drawings.
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Get video element dimensions.
+    if (!ctx || !webcamRef.current || !webcamRef.current.video) return;
+  
+    // Get actual video dimensions
     const video = webcamRef.current.video;
-    if (!video) return;
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
     
-    // Ensure the canvas size matches the video size.
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Set canvas dimensions to match video stream
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+  
+    // Clear previous drawings
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+    // Get display dimensions (CSS dimensions)
+    const displayWidth = video.offsetWidth;
+    const displayHeight = video.offsetHeight;
+  
+    // Calculate scale factors
+    const scaleX = videoWidth / displayWidth;
+    const scaleY = videoHeight / displayHeight;
+  
+    // detections.forEach(detection => {
+    //   // Convert bounding box coordinates based on scale
+    //   const [x1, y1, x2, y2] = detection.bbox.map((coord, index) => {
+    //     return index % 2 === 0 ? coord * scaleX : coord * scaleY;
+    //   });
+  
+    //   // Flip coordinates horizontally if mirrored
+    //   const flippedX1 = videoWidth - x2;
+    //   const flippedX2 = videoWidth - x1;
+  
+    //   // Draw bounding box
+    //   ctx.strokeStyle = getColorForLabel(detection.label);
+    //   ctx.lineWidth = 3;
+    //   ctx.beginPath();
+    //   ctx.rect(flippedX1, y1, flippedX2 - flippedX1, y2 - y1);
+    //   ctx.stroke();
+  
+    //   // Draw label
+    //   ctx.fillStyle = getColorForLabel(detection.label);
+    //   ctx.fillRect(flippedX1, y1 - 20, ctx.measureText(detection.label).width + 10, 20);
+    //   ctx.fillStyle = 'white';
+    //   ctx.fillText(detection.label, flippedX1 + 5, y1 - 5);
 
-    // Draw each detection.
+    //   console.log(selectedObject);
+    //   if (selectedObject === detection.label) {
+    //     ctx.strokeStyle = '#FFD700'; // Gold color for selection
+    //     ctx.lineWidth = 4;
+    //     ctx.beginPath();
+    //     ctx.rect(x1 - 2, y1 - 2, (x2 - x1) + 4, (y2 - y1) + 4);
+    //     ctx.stroke();
+    //   }
+    // });
     detections.forEach(detection => {
       const [x1, y1, x2, y2] = detection.bbox;
-      const label = detection.label;
-      
-      ctx.strokeStyle = getColorForLabel(label);
+      // No flipping
+      const drawX1 = x1;
+      const drawX2 = x2;
+      // Draw bounding box
+      ctx.strokeStyle = getColorForLabel(detection.label);
       ctx.lineWidth = 3;
-      ctx.font = '16px Arial';
-      
-      // Draw bounding box.
       ctx.beginPath();
-      ctx.rect(x1, y1, x2 - x1, y2 - y1);
+      ctx.rect(drawX1, y1, drawX2 - drawX1, y2 - y1);
       ctx.stroke();
-      
-      // Draw label background.
-      ctx.fillStyle = getColorForLabel(label);
-      const textWidth = ctx.measureText(label).width;
-      ctx.fillRect(x1, y1 - 20, textWidth + 10, 20);
-      
-      // Draw label text.
+      // Draw label (adjust as needed)
+      ctx.fillStyle = getColorForLabel(detection.label);
+      ctx.fillRect(drawX1, y1 - 20, ctx.measureText(detection.label).width + 10, 20);
       ctx.fillStyle = 'white';
-      ctx.fillText(label, x1 + 5, y1 - 5);
+      ctx.fillText(detection.label, drawX1 + 5, y1 - 5);
     });
   };
 
   // Utility: get color for a given label.
   const getColorForLabel = (label) => {
     const colors = {
-      person: '#FF0000',
-      book: '#00FF00',
-      bottle: '#0000FF',
+      person: '#FF0000',      // Red
+      book: '#00FF00',        // Green
+      bottle: '#0000FF',      // Blue
+      car: '#FFA500',         // Orange
+      chair: '#800080',       // Purple
+      'cell phone': '#FF1493',// Deep Pink
+      cup: '#00FFFF',         // Cyan
+      laptop: '#4B0082',      // Indigo
+      dog: '#8B4513',         // Saddle Brown
+      cat: '#FF69B4',         // Hot Pink
+      keyboard: '#808000',    // Olive
+      mouse: '#008080',       // Teal
       default: '#FFFF00'
     };
     return colors[label.toLowerCase()] || colors.default;
@@ -179,6 +246,18 @@ const ObjectDetector = () => {
                 }
             }
         );
+
+
+        const filtered = response.data.results.filter(d => d.confidence > 0.6).sort((a, b) => b.confidence - a.confidence);
+
+        const finalDetections = [];
+        filtered.forEach(current => {
+          if (!finalDetections.some(existing => 
+            calculateIOU(current.bbox, existing.bbox) > 0.5
+          )) {
+            finalDetections.push(current);
+          }
+        });
         
         if (response.data.error) throw new Error(response.data.error);
         if (!response.data.results?.length) throw new Error('No objects detected');
@@ -189,6 +268,15 @@ const ObjectDetector = () => {
     } finally {
         setIsProcessing(false);
     }
+};
+
+const calculateIOU = (boxA, boxB) => {
+  const [ax1, ay1, ax2, ay2] = boxA;
+  const [bx1, by1, bx2, by2] = boxB;
+  
+  const intersection = Math.max(0, Math.min(ax2, bx2) - Math.max(ax1, bx1)) * Math.max(0, Math.min(ay2, by2) - Math.max(ay1, by1));
+  const union = (ax2-ax1)*(ay2-ay1) + (bx2-bx1)*(by2-by1) - intersection
+  return intersection / union;
 };
 
   // Redraw boxes whenever detections change.
@@ -211,16 +299,15 @@ const ObjectDetector = () => {
 
   return (
     <div className="container">
-      <h2>Object Dimension Detection</h2>
-      
       <div className="camera-container" style={{ position: 'relative' }}>
-        <Webcam
-          ref={webcamRef}
-          screenshotFormat="image/jpeg"
-          videoConstraints={videoConstraints}
-          className="webcam-view"
-          style={{ width: '100%', height: 'auto' }}
-        />
+      <Webcam ref={webcamRef} screenshotFormat="image/jpeg"
+      videoConstraints={videoConstraints}
+      className="webcam-view"
+      style={{ 
+      width: '100%', 
+      height: 'auto'// Mirror the video feed
+      }}
+/>
         
         {/* Canvas with click handling */}
         <canvas
@@ -230,8 +317,8 @@ const ObjectDetector = () => {
             position: 'absolute',
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
+            width: '640px',
+            height: '480px',
             cursor: 'pointer'
           }}
         />
@@ -241,6 +328,7 @@ const ObjectDetector = () => {
           disabled={isProcessing}
           className="capture-button"
           style={{
+            color:'white',
             position: 'absolute',
             bottom: '20px',
             left: '50%',
