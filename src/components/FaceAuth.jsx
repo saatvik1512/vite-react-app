@@ -83,39 +83,42 @@ const FaceAuth = ({ onAuthSuccess }) => {
     return (
       <div className="faceauth-container">
         <div className="auth-box">
-          <h1 className="auth-title">Face Authentication</h1>
-          <p className="welcome-message" style={{color:'rgb(139 69 19)', fontWeight:'700', fontSize:'1.2rem'}}>Welcome</p>
-          <p className="auth-subtitle " style={{color:'rgb(139 69 19)'}}>Authenticate using facial recognition</p>
+          <h1 className="auth-title" style={{textShadow:'0 0 10px #4d6bfe'}}>Face Authentication</h1>
+          <p className="welcome-message" style={{color:'#4d6bfe', fontWeight:'700', fontSize:'1.2rem'}}>Welcome</p>
+          <p className="auth-subtitle " style={{color:'#4d6bfe'}}>Authenticate using facial recognition</p>
 
           <button 
             className="auth-btn face-id-btn"
             onClick={() => setStage("capture")}
             disabled={isProcessing}
+            style={{backgroundColor:'#4d6bfe'}}
           >
             {isSignUp ? "SignUp" : "Login"}
           </button>
 
           <div className="auth-divider">
-            <span style={{color:'rgb(139 69 19)'}}>or</span>
+            <span style={{color:'#4d6bfe'}}>or</span>
           </div>
 
           <button
             className="auth-btn google-btn"
             onClick={handleGoogleSignIn}
             disabled={isProcessing}
+            style={{backgroundColor:'#4d6bfe'}}
           >
             Continue with Google
           </button>
 
-          <div className="auth-footer" style={{color:'rgb(139 69 19)'}}>
+          <div className="auth-footer" style={{color:'#4d6bfe'}}>
             {isSignUp ? 
               "Already have an account? " : 
               "Don't have an account? "
             }
             <button
-              style={{color:'white'}}
+              style={{color:'white', backgroundColor:'#4d6bfe'}}
               className="toggle-auth-mode"
               onClick={() => setIsSignUp(!isSignUp)}
+              
             >
               {isSignUp ? "Login" : "Sign up"}
             </button>
@@ -133,7 +136,7 @@ const FaceAuth = ({ onAuthSuccess }) => {
           <h1 className="auth-title">
             {isSignUp ? "Create Face ID" : "Authenticate Face"}
           </h1>
-          <p className="auth-subtitle">Position your face in the frame</p>
+          <p className="auth-subtitle" style={{color:'white', fontWeight:'700'}}>Position your face in the frame</p>
 
           <div className="webcam-container">
             <Webcam
@@ -147,7 +150,8 @@ const FaceAuth = ({ onAuthSuccess }) => {
           </div>
 
           <div className="capture-controls">
-            <button 
+            <button
+              style={{color:'white', backgroundColor:'#4d6bfe'}}
               className="auth-btn secondary-btn"
               onClick={() => setStage("choose")}
               disabled={isProcessing}
@@ -158,6 +162,7 @@ const FaceAuth = ({ onAuthSuccess }) => {
               className="auth-btn primary-btn"
               onClick={capturePhoto} 
               disabled={isProcessing}
+              style={{color:'white', backgroundColor:'#4d6bfe'}}
             >
               {isProcessing ? "Processing..." : "Capture"}
             </button>
@@ -172,6 +177,8 @@ const FaceAuth = ({ onAuthSuccess }) => {
       </div>
     );
   }
+
   return null;
 };
+
 export default FaceAuth;

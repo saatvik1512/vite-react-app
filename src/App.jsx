@@ -302,7 +302,7 @@ const HeightDetector = () => {
 
   return (
     <div className="container">
-      <h1>Auto Height Detector</h1>
+      <h1 style={{color:'#4d6bfe'}}>Auto Height Detector</h1>
 
       {error && (
         <div className="error">
@@ -343,6 +343,7 @@ const HeightDetector = () => {
             fontSize: '20px',
             padding: '15px 30px',
             position: 'absolute',
+            backgroundColor: '#4d6bfe',
             bottom: '20px',
             right: '20px',
             color: 'white',
@@ -358,7 +359,7 @@ const HeightDetector = () => {
               top: '20px',
               left: '20px',
               color: 'white',
-              backgroundColor: 'rgba(0,0,0,0.5)',
+              backgroundColor: '#4d6bfe',
               padding: '10px',
               borderRadius: '5px'
             }}
@@ -369,7 +370,7 @@ const HeightDetector = () => {
       </div>
 
       {height && (
-        <div className="result" style={{ fontSize: '50px' }}>
+        <div className="result" style={{ fontSize: '50px', color: '#4d6bfe' }}>
           Estimated Height: {height} cm
         </div>
       )}

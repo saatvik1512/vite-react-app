@@ -27,16 +27,16 @@ function App2() {
       {!currentUser ? (
         <FaceAuth onAuthSuccess={handleAuthSuccess} />
       ) : (
-        <div className="app-container">
+        <div className="app-container" style={{backgroundColor:'#292a2d', padding:'1.2rem'}}>
           <div className="user-header" style={{display:'grid', gridTemplateRows:'1fr 1fr', justifyContent:'center', alignItems:'center'}} >
-            <div className="user-greeting" style={{ color: 'rgb(139 69 19)', textAlign:'center', marginBottom:'1.8rem', fontSize:'2.9rem'}}>
+            <div className="user-greeting" style={{ color: '#4d6bfe', textAlign:'center', marginBottom:'1.8rem', fontSize:'2.9rem'}}>
               Welcome User #{currentUser.slice(0, 8)}
             </div>
             <nav className="nav-buttons" style={{display:'flex', gap:'1.29'}}>
-              <button onClick={() => setCurrentView('height')} style={{ color: 'white', margin:'0 1.2rem', fontSize:'1.3rem' }}>
+              <button onClick={() => setCurrentView('height')} style={{ color: 'white', margin:'0 1.2rem', fontSize:'1.3rem', background:'#4d6bfe'}}>
                 Height Detection
               </button>
-              <button onClick={() => setCurrentView('object')} style={{ color: 'white', margin:'0 1.2rem', fontSize:'1.3rem' }}>
+              <button onClick={() => setCurrentView('object')} style={{ color: 'white', margin:'0 1.2rem', fontSize:'1.3rem', background:'#4d6bfe' }}>
                 Object Detection 
               </button>
             </nav>
@@ -45,7 +45,7 @@ function App2() {
             {currentView === 'height' ? <HeightDetector /> : <ObjectDetector />}
           </div>
           <div className="footer" style={{display:'flex', justifyContent:'flex-end', marginTop:'20px'}}>
-            <button onClick={handleLogout} className="logout-button" style={{ color: 'white' }}>
+            <button onClick={handleLogout} className="logout-button" style={{ color: 'white', background:'#4d6bfe'}}>
               Logout
             </button>
           </div>

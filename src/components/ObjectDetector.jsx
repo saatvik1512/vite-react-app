@@ -13,6 +13,83 @@ const ObjectDetector = () => {
   const [synth, setSynth] = useState(null);
   const [utterance, setUtterance] = useState(null);
   const abortController = useRef(new AbortController());
+  const [askAbortController] = useState(new AbortController());
+
+
+  const [isListening, setIsListening] = useState(false);
+  const recognition = useRef(null); 
+
+
+  const [showQuestionInput, setShowQuestionInput] = useState(false);
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [isAsking, setIsAsking] = useState(false);
+
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition.current = new SpeechRecognition();
+      
+      // Configuration
+      recognition.current.continuous = true;
+      recognition.current.interimResults = false;
+      recognition.current.lang = 'en-US';
+  
+      // Event handlers
+      recognition.current.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        if (transcript.includes('detect object')) {
+          captureMeasurement();
+        }
+      };
+  
+      recognition.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        // Restart on error
+        setTimeout(() => {
+          if (recognition.current) recognition.current.start();
+        }, 1000);
+      };
+  
+      recognition.current.onend = () => {
+        // Automatically restart recognition
+        recognition.current.start();
+      };
+  
+      // Start initial listening
+      const startRecognition = () => {
+        try {
+          recognition.current.start();
+          setIsListening(true);
+        } catch (err) {
+          console.error('Speech recognition start failed:', err);
+          setTimeout(startRecognition, 1000);
+        }
+      };
+  
+      startRecognition();
+  
+      // Cleanup
+      return () => {
+        if (recognition.current) {
+          recognition.current.stop();
+          recognition.current = null;
+        }
+      };
+    } else {
+      console.warn('Speech recognition not supported');
+      setError('Voice commands not supported in this browser');
+    }
+  }, []);
+
+
+
+
+
+
+
+
 
 
   useEffect(() => {
@@ -83,6 +160,10 @@ const ObjectDetector = () => {
 
   // onClick handler for the canvas.
   const handleCanvasClick = (event) => {
+    askAbortController.abort();
+    setShowQuestionInput(false);
+    setQuestion('');
+    setAnswer('');
     // Get canvas bounding rectangle.
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -94,21 +175,6 @@ const ObjectDetector = () => {
     const clickX = (event.clientX - rect.left) * (canvas.width / rect.width);
     const clickY = (event.clientY - rect.top) * (canvas.height / rect.height);
 
-    // Iterate over detections to see if click falls inside any bbox.
-
-    // for (let detection of detections) {
-    //   const [x1, y1, x2, y2] = detection.bbox;
-    //   if (clickX >= x1 && clickX <= x2 && clickY >= y1 && clickY <= y2) {
-    //     if (synth && synth.speaking) {
-    //       synth.cancel();
-    //     }
-    //     setSelectedObject(detection.label);
-    //     // Fetch object information from backend.
-    //     fetchObjectInfo(detection.label);
-    //     return; // Only process the first detection that matches.
-    //   }
-    // }
-
     for (let i = detections.length - 1; i >= 0; i--) {
       const detection = detections[i];
       const [x1, y1, x2, y2] = detection.bbox;
@@ -119,13 +185,38 @@ const ObjectDetector = () => {
           synth.cancel();
         }
         setSelectedObject(detection.label);
-        // Fetch object information from backend.
         fetchObjectInfo(detection.label);
         return;
       }
     }
 
   };
+
+
+  const handleAskQuestion = async (e) => {
+    e.preventDefault();
+    if (!question.trim()) return;
+    
+    setIsAsking(true);
+    try {
+      const response = await axios.post('http://localhost:5000/ask-about-image', {
+        question: question
+      });
+      setAnswer(response.data.answer);
+      // speakText(response.data.answer);
+    } catch (err) {
+      if (err.name !== 'CanceledError') {
+        setError('Failed to get answer: ' + (err.response?.data?.error || err.message));
+      }
+    } finally {
+      setIsAsking(false);
+    }
+  };
+
+
+
+
+
 
   // Drawing function: draw detection boxes on the canvas.
   const drawBoxes = () => {
@@ -152,39 +243,7 @@ const ObjectDetector = () => {
     // Calculate scale factors
     const scaleX = videoWidth / displayWidth;
     const scaleY = videoHeight / displayHeight;
-  
-    // detections.forEach(detection => {
-    //   // Convert bounding box coordinates based on scale
-    //   const [x1, y1, x2, y2] = detection.bbox.map((coord, index) => {
-    //     return index % 2 === 0 ? coord * scaleX : coord * scaleY;
-    //   });
-  
-    //   // Flip coordinates horizontally if mirrored
-    //   const flippedX1 = videoWidth - x2;
-    //   const flippedX2 = videoWidth - x1;
-  
-    //   // Draw bounding box
-    //   ctx.strokeStyle = getColorForLabel(detection.label);
-    //   ctx.lineWidth = 3;
-    //   ctx.beginPath();
-    //   ctx.rect(flippedX1, y1, flippedX2 - flippedX1, y2 - y1);
-    //   ctx.stroke();
-  
-    //   // Draw label
-    //   ctx.fillStyle = getColorForLabel(detection.label);
-    //   ctx.fillRect(flippedX1, y1 - 20, ctx.measureText(detection.label).width + 10, 20);
-    //   ctx.fillStyle = 'white';
-    //   ctx.fillText(detection.label, flippedX1 + 5, y1 - 5);
 
-    //   console.log(selectedObject);
-    //   if (selectedObject === detection.label) {
-    //     ctx.strokeStyle = '#FFD700'; // Gold color for selection
-    //     ctx.lineWidth = 4;
-    //     ctx.beginPath();
-    //     ctx.rect(x1 - 2, y1 - 2, (x2 - x1) + 4, (y2 - y1) + 4);
-    //     ctx.stroke();
-    //   }
-    // });
     detections.forEach(detection => {
       const [x1, y1, x2, y2] = detection.bbox;
       // No flipping
@@ -229,6 +288,7 @@ const ObjectDetector = () => {
     setIsProcessing(true);
     setError('');
     setObjectInfo('');
+    setShowQuestionInput(false);
     
     try {
         const imageSrc = webcamRef.current.getScreenshot();
@@ -263,6 +323,9 @@ const ObjectDetector = () => {
         if (!response.data.results?.length) throw new Error('No objects detected');
         
         setDetections(response.data.results);
+        setShowQuestionInput(true);
+        setAnswer('');
+        setQuestion('');
     } catch (err) {
         setError(err.response?.data?.error || err.message);
     } finally {
@@ -332,7 +395,8 @@ const calculateIOU = (boxA, boxB) => {
             position: 'absolute',
             bottom: '20px',
             left: '50%',
-            transform: 'translateX(-50%)'
+            transform: 'translateX(-50%)',
+            background: '#4d6bfe',
           }}
         >
           {isProcessing ? 'Analyzing...' : 'Measure Objects'}
@@ -360,8 +424,88 @@ const calculateIOU = (boxA, boxB) => {
       </div>
 
       {error && <div className="error">{error}</div>}
+      <div className="voice-status" style={{
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        backgroundColor: isListening ? 'rgba(0,255,0,0.5)' : 'rgba(255,0,0,0.5)',
+        padding: '8px 15px',
+        borderRadius: '20px',
+        color: 'white',
+        fontSize: '0.9rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }}>
+        <div style={{
+          width: '12px',
+          height: '12px',
+          borderRadius: '50%',
+          backgroundColor: isListening ? '#00ff00' : '#ff0000',
+          animation: isListening ? 'pulse 1.5s infinite' : 'none'
+        }} />
+        {isListening ? 'Listening for "detect object"' : 'Microphone disabled'}
+        
+      </div>
+
+      {showQuestionInput && (
+  <div style={{
+    position: 'fixed',
+    bottom: '80px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '80%',
+    maxWidth: '600px',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    padding: '20px',
+    borderRadius: '10px',
+    zIndex: 1000
+  }}>
+    <form onSubmit={handleAskQuestion} style={{ display: 'flex', gap: '10px' }}>
+      <input
+        type="text"
+        value={question}
+        onChange={(e) => setQuestion(e.target.value)}
+        placeholder="Ask about the detected objects..."
+        style={{
+          flex: 1,
+          padding: '10px',
+          borderRadius: '5px',
+          border: 'none',
+          background: '#333',
+          color: 'white'
+        }}
+      />
+      <button
+        type="submit"
+        disabled={isAsking}
+        style={{
+          padding: '10px 20px',
+          borderRadius: '5px',
+          border: 'none',
+          background: '#4d6bfe',
+          color: 'white',
+          cursor: 'pointer'
+        }}
+      >
+        {isAsking ? 'Asking...' : 'Ask'}
+      </button>
+    </form>
+    
+    {answer && (
+      <div style={{
+        marginTop: '15px',
+        padding: '10px',
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: '5px',
+        color: '#00ff88'
+      }}>
+        {answer}
+      </div>
+    )}
+  </div>
+)}
     </div>
   );
 };
-
 export default ObjectDetector;
